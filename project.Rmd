@@ -1,0 +1,88 @@
+---
+title: "Machine_Learning_Course_Project"
+author: "Alberto Zamanillo"
+date: "25 de diciembre de 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Introduction
+
+## Background
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+## Data
+The training data for this project are available here: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+The data for this project come from this source: http://groupware.les.inf.puc-rio.br/har. If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment.
+
+## Project Goal
+The goal of your project is to predict the manner in which they did the exercise. This is the “classe” variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases
+
+## Loading packages and data
+
+```{r packages and data}
+library(caret)
+library(randomForest)
+
+#Loading data
+url_training <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+url_testing <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+
+#Creating the databases
+training <- read.csv(url(url_training))
+testing <- read.csv(url(url_testing))
+
+```
+
+## Machine learning (cleaning data)
+
+```{r}
+# setting the seed
+set.seed(42)
+# Removing variables with low variance and NA
+trainingData<- training[, colSums(is.na(training)) == 0]
+testingData <- testing[, colSums(is.na(testing)) == 0]
+
+zerovariance <- nearZeroVar(trainingData, saveMetrics = TRUE)
+training <- trainingData [,zerovariance$nzv ==FALSE]
+
+# remove columns without relevant information (i.e: id, name, date)
+training <- training [c(-1,-2,-3,-4,-5,-6)]
+
+
+
+```
+
+After the pre-processing, I split the training data in two:
+```{r}
+inTrain <- createDataPartition(training$classe, p = 0.6, list = FALSE)
+Train_training <- training[inTrain, ]
+Test_training <- training[-inTrain, ]
+
+```
+I pre-process the data:
+
+```{r}
+preObj <- preProcess(Train_training, method = c("center", "scale"))
+p <- predict(preObj, Train_training)
+```
+
+I chose RandomForest model since the data contains both discrete and continuos variables
+```{r}
+
+fit = train(classe ~., data = training, method = 'rf', trControl = trainControl(method = 'cv', number = 5), na.action = na.omit)
+fit
+varImp(fit)
+```
+
+The model with the testing sample:
+
+```{r}
+pred<- predict(fit, newdata = testing)
+pred
+```
